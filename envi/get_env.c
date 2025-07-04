@@ -1,0 +1,104 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   get_env.c                                          :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: mubersan <mubersan@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/04/24 18:54:11 by mubersan          #+#    #+#             */
+/*   Updated: 2025/06/29 22:00:34 by mubersan         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "../includes/minishell.h"
+
+void copy_env(t_data *data, char **envp)
+{
+    int i;
+    int j;
+
+    if (!data || !envp)
+        return;
+    i = 0;
+    while (envp[i])
+        i++;
+    data->env->env = (char **)malloc(sizeof(char *) * (i + 1));
+    if (!data->env->env)
+        return;
+    j = 0;
+    while (j < i)
+    {
+        data->env->env[j] = ft_strdup(envp[j]);
+        if (!data->env->env[j])
+        {
+            while (j-- > 0)
+                free(data->env->env[j]);
+            free(data->env->env);
+            data->env->env = NULL;
+            return;
+        }
+        j++;
+    }
+    data->env->env[j] = NULL;
+}
+
+int	error_handling(int err)
+{
+	if (err == 6)
+		perror("Error creating pipe");
+	else if (err == 2)
+		perror("Error creating process");
+	else if (err == 3)
+	{
+		perror("Command not found");
+		exit(127);
+	}
+	else if (err == 4)
+		perror("Command is empty or NULL");
+	else if (err == 5)
+		perror("Error executing command");
+	exit(EXIT_FAILURE);
+}
+
+void	free_tab(char **str)
+{
+	int	i;
+
+	i = 0;
+	while (str[i])
+	{
+		free(str[i]);
+		i++;
+	}
+	free(str);
+}
+
+char *get_path(char *cmd, t_data *data, char **argv)
+{
+    int i;
+    char **path;
+    char *good_path;
+    char *temp;
+
+    (void)argv;
+    i = 0;
+    while (data->env->env[i] && ft_strncmp(data->env->env[i], "PATH=", 5) != 0)
+        i++;
+    if (!data->env->env[i])
+        return (NULL);
+    path = ft_split(data->env->env[i] + 5, ':');
+    i = 0;
+    while (path[i])
+    {
+        temp = ft_strjoin(path[i], "/");
+        good_path = ft_strjoin(temp, cmd);
+        free(temp);
+        if (access(good_path, X_OK) == 0)
+            return (free_tab(path), good_path);
+        i++;
+        free(good_path);
+    }
+    free_tab(path);
+    return (NULL);
+}
+
