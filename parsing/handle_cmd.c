@@ -82,28 +82,26 @@ t_data	*init_data(char **envp)
 
 	data->exit = malloc(sizeof(t_exit));
 	if (!data->exit)
-	{
-		free(data);
-		return (NULL);
-	}
+		return (free(data), NULL);
+
 	data->exit->exit = malloc(sizeof(int));
 	if (!data->exit->exit)
-	{
-		free(data->exit);
-		free(data);
-		return (NULL);
-	}
+		return (free(data->exit), free(data), NULL);
 	*data->exit->exit = 0;
 
 	data->env = malloc(sizeof(t_env));
 	if (!data->env)
+		return (free(data->exit->exit), free(data->exit), free(data), NULL);
+
+	copy_env(data, envp);
+	if (!data->env->env)
 	{
+		free(data->env);
 		free(data->exit->exit);
 		free(data->exit);
 		free(data);
 		return (NULL);
 	}
-	data->env->env = envp;
 
 	data->token = NULL;
 	data->cmd = NULL;
