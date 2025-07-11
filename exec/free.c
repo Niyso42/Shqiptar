@@ -12,19 +12,6 @@
 
 #include "../includes/minishell.h"
 
-void free_env(t_env *env)
-{
-	int i;
-
-	i = 0;
-	while(env->env[i])
-	{
-		free(env->env[i]);
-		i++;
-	}
-	free(env->env);
-}
-
 void free_cmd(t_cmd *cmd)
 {
 	t_cmd *tmp;
@@ -53,6 +40,19 @@ void free_tokens(t_token *token)
 	}
 }
 
+void free_env(t_env *env)
+{
+    int i = 0;
+    if (!env || !env->env)
+        return;
+    while (env->env[i])
+    {
+        free(env->env[i]);
+        i++;
+    }
+    free(env->env);
+}
+
 void free_data(t_data *data)
 {
     if (!data)
@@ -64,6 +64,9 @@ void free_data(t_data *data)
         free(data->exit);
     }
     if (data->env)
+    {
+        free_env(data->env);
         free(data->env);
+    }
     free(data);
 }

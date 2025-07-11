@@ -122,14 +122,14 @@ void	handle_redin_cmd(t_cmd *cmd, t_token *token)
 {
 	if (token->next == NULL)
 		return ;
-	cmd->infile = token->next->content;
+	cmd->infile = ft_strdup(token->next->content);
 }
 
 void	handle_append_cmd(t_cmd *cmd, t_token *token)
 {
 	if (token->next == NULL)
 		return ;
-	cmd->outfile = token->next->content;
+	cmd->outfile = ft_strdup(token->next->content);
 	cmd->append = 1;
 }
 
@@ -137,7 +137,7 @@ void	handle_heredoc_cmd(t_cmd *cmd, t_token *token, int *i)
 {
 	if (token->next == NULL)
 		return;
-	cmd->heredoc[*i] = token->next->content;
+	cmd->heredoc[*i] = ft_strdup(token->next->content);
 	(*i)++;
 }
 
@@ -145,7 +145,7 @@ void	handle_redout_cmd(t_cmd *cmd, t_token *token)
 {
 	if (token->next == NULL)
 		return ;
-	cmd->outfile = token->next->content;
+	cmd->outfile = ft_strdup(token->next->content);
 	cmd->append = 0;
 }
 

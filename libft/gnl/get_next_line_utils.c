@@ -85,12 +85,11 @@ char	*ft_substr_gnl(char *buff, size_t start)
 
 int	check_error(t_struct *b, char *line)
 {
+	(void)b;
 	if (!line)
-		return (1);
+		return (1); 
 	if (check_line(line) == 1)
-		return (2);
-	if (b->bytes_read < BUFFER_SIZES)
-		return (3);
+		return (2); 
 	return (0);
 }
 
