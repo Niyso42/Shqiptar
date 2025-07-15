@@ -98,7 +98,7 @@ void				fill_heredocs_from_tokens(t_token *token, t_cmd *cmd);
 void				allocate_heredoc(t_token *token, t_cmd *cmd);
 void 				process_heredocs(t_cmd *cmd, t_data *data);
 int 				handle_no_command(t_cmd *cmds, t_data *data, t_token *tokens, char *prompt);
-int					error_handling(int err);
+int					error_handling(int err, t_data *data);
 void 				handle_sigint_status(t_data *data);
 void				ft_cd(char **args, t_data *data);
 void				enable_echoctl(void);

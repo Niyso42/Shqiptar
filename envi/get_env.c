@@ -42,21 +42,18 @@ void copy_env(t_data *data, char **envp)
     data->env->env[j] = NULL;
 }
 
-int	error_handling(int err)
+int	error_handling(int err, t_data *data)
 {
+	if (data)
+		free_data(data); 
+
 	if (err == 6)
 		perror("Error creating pipe");
-	else if (err == 2)
-		perror("Error creating process");
 	else if (err == 3)
 	{
 		perror("Command not found");
 		exit(127);
 	}
-	else if (err == 4)
-		perror("Command is empty or NULL");
-	else if (err == 5)
-		perror("Error executing command");
 	exit(EXIT_FAILURE);
 }
 

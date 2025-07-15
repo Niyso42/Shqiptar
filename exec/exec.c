@@ -18,7 +18,7 @@ void execute_cmd(char *path, char **argv, t_data *data)
     {
         free_tab(argv);
         free(path);
-        error_handling(3);
+        error_handling(3, data);
     }
 }
 
@@ -28,7 +28,7 @@ char *prepare_path(char *cmd, t_data *data)
     char **argv;
 
     if (!cmd || !cmd[0])
-        error_handling(3);
+        error_handling(3, data);
     argv = ft_split(cmd, ' ');
     if (access(argv[0], X_OK) == 0)
         path = ft_strdup(argv[0]);
@@ -37,12 +37,12 @@ char *prepare_path(char *cmd, t_data *data)
     else
     {
         free_tab(argv);
-        error_handling(3);
+        error_handling(3, data);
     }
     if (!path)
     {
         free_tab(argv);
-        error_handling(3);
+        error_handling(3 ,data);
     }
     free_tab(argv);
     return (path);
@@ -93,7 +93,7 @@ void redirect_input(t_cmd *cmd, int *fds, int index)
 	{
 		fd = open(cmd->infile, O_RDONLY);
 		if (fd == -1)
-			error_handling(3);
+			return ;
 		dup2(fd, 0);
 		close(fd);
 	}
@@ -120,7 +120,7 @@ void redirect_output(t_cmd *cmd, int *fds, int index, int is_last)
 		else
 			fd = open(cmd->outfile, O_WRONLY | O_CREAT | O_APPEND, 0777);
 		if (fd == -1)
-			error_handling(3);
+			return ;
 		dup2(fd, 1);
 		close(fd);
 	}
@@ -140,33 +140,50 @@ void execute_one_cmd(t_cmd *cmd, t_exec_context *ctx, t_data *data)
     redirect_output(cmd, ctx->fds, ctx->index, ctx->is_last);
 
     argv = build_argv(cmd);
+    if (!argv || !argv[0])
+    {
+        free_tab(argv);
+        free_data(data);
+        exit(0);
+    }
 
     if (is_parent_builtin(argv[0]))
     {
         free_tab(argv);
+        free_data(data);
         exit(0);
     }
+
     if (is_builtin(argv[0]))
     {
         exec_builtin(argv, data);
         free_tab(argv);
+        free_data(data);
         exit(0);
     }
 
     path = prepare_path(argv[0], data);
     if (!path)
     {
+        ft_putstr_fd("Command not found\n", 2);
         free_tab(argv);
-        error_handling(3);
+        free_data(data);
+        exit(127);
     }
+
     execute_cmd(path, argv, data);
+
+    free(path);
+    free_tab(argv);
+    free_data(data);
+    exit(126);
 }
 
 void execute_all_cmd(t_cmd *cmd, t_data *data)
 {
     int count = 0;
     pid_t pid;
-    int *fds;
+    int *fds = NULL;
     int index = 0;
     int status;
     int is_last;
@@ -192,7 +209,8 @@ void execute_all_cmd(t_cmd *cmd, t_data *data)
         return;
     }
 
-    create_fds(cmd, &fds);
+    if (count > 1 && create_fds(cmd, &fds) == -1)
+        error_handling(6, data);
 
     signal(SIGINT, SIG_IGN);
     signal(SIGQUIT, SIG_IGN);
@@ -225,9 +243,11 @@ void execute_all_cmd(t_cmd *cmd, t_data *data)
         cmd = cmd->next;
     }
 
+    i = 0;
     while (i < (count - 1) * 2)
         close(fds[i++]);
-    free(fds);
+    if (fds)
+        free(fds);
 
     i = 0;
     while (i < count)
@@ -235,10 +255,11 @@ void execute_all_cmd(t_cmd *cmd, t_data *data)
         finished_pid = waitpid(-1, &status, 0);
         if (finished_pid == last_pid)
         {
-			if (WIFEXITED(status))
-				*data->exit->exit = WEXITSTATUS(status);
-			else if (WIFSIGNALED(status))
-				*data->exit->exit = 128 + WTERMSIG(status);
+            if (WIFEXITED(status))
+                *data->exit->exit = WEXITSTATUS(status);
+            else if (WIFSIGNALED(status))
+                *data->exit->exit = 128 + WTERMSIG(status);
+
             if (WIFSIGNALED(status) && WTERMSIG(status) == SIGINT)
                 write(STDOUT_FILENO, "\n", 1);
             if (WIFSIGNALED(status) && WTERMSIG(status) == SIGQUIT)
@@ -246,6 +267,7 @@ void execute_all_cmd(t_cmd *cmd, t_data *data)
         }
         i++;
     }
+
     signal(SIGINT, handle_sigint);
     signal(SIGQUIT, SIG_IGN);
 }

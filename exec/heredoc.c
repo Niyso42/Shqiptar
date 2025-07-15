@@ -44,7 +44,7 @@ void process_heredocs(t_cmd *cmd, t_data *data)
         if (tmp->heredoc)
         {
             if (create_heredoc_pipe(tmp, data) == -1)
-                error_handling(3);
+                error_handling(3, data);
         }
         tmp = tmp->next;
     }
@@ -60,6 +60,7 @@ int handle_no_command(t_cmd *cmds, t_data *data, t_token *tokens, char *prompt)
             return 0; 
         check = check->next;
     }
+    printf("No command detected, freeing tokens...\n");
     free_cmd(cmds);
     *data->exit->exit = 0; 
     free_tokens(tokens);
