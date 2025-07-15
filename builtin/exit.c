@@ -42,11 +42,7 @@ void ft_exit(char **args, t_data *data)
     {
         exit_code = ft_atoi(args[0]) % 256;
     }
-
-    // Nettoyer la mémoire et l'historique avant de quitter
     rl_clear_history();
-    rl_cleanup_after_signal();
-    rl_deprep_terminal();
     free_data(data);
     exit(exit_code);
 }
