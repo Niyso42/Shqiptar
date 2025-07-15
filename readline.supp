@@ -12,16 +12,3 @@
    ...
    obj:*/libtinfo.so*
 }
-{
-   system_malloc_reachable
-   Memcheck:Leak
-   match-leak-kinds: reachable
-   fun:malloc
-   fun:ft_strdup
-}
-{
-   all_still_reachable
-   Memcheck:Leak
-   match-leak-kinds: reachable
-   fun:*
-}

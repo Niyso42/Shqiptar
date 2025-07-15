@@ -82,6 +82,7 @@ typedef struct s_data
 	t_env			*env;
 	t_token			*token;
 	t_cmd			*cmd;
+	int				should_exit;
 }					t_data;
 
 void				copy_env(t_data *data, char **envp);

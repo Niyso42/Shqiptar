@@ -42,7 +42,8 @@ void ft_exit(char **args, t_data *data)
     {
         exit_code = ft_atoi(args[0]) % 256;
     }
-    rl_clear_history();
-    free_data(data);
-    exit(exit_code);
+
+    // Marquer que le shell doit se terminer
+    *data->exit->exit = exit_code;
+    data->should_exit = 1;
 }

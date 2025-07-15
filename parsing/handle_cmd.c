@@ -105,6 +105,7 @@ t_data	*init_data(char **envp)
 
 	data->token = NULL;
 	data->cmd = NULL;
+	data->should_exit = 0;
 
 	return (data);
 }

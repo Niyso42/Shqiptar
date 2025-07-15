@@ -96,9 +96,15 @@ int main(int ac, char **av, char **envp)
         free_tokens(tokens);
         free_cmd(cmds);
         free(prompt);
+        
+        // Vérifier si le shell doit se terminer
+        if (data->should_exit)
+            break;
     }
+    rl_clear_history();
+    int exit_code = *data->exit->exit;
     free_data(data);
-    return (0);
+    return (exit_code);
 }
 
 
