@@ -15,12 +15,42 @@
 void free_cmd(t_cmd *cmd)
 {
 	t_cmd *tmp;
+	int i;
 
 	while (cmd)
 	{
 		tmp = cmd->next;
+		
+		if (cmd->cmd)
+			free(cmd->cmd);
+		
 		if (cmd->args)
+		{
+			i = 0;
+			while (cmd->args[i])
+			{
+				free(cmd->args[i]);
+				i++;
+			}
 			free(cmd->args);
+		}
+		
+		if (cmd->infile)
+			free(cmd->infile);
+		
+		if (cmd->outfile)
+			free(cmd->outfile);
+		
+		if (cmd->heredoc)
+		{
+			i = 0;
+			while (i < cmd->nb_heredoc && cmd->heredoc[i])
+			{
+				free(cmd->heredoc[i]);
+				i++;
+			}
+			free(cmd->heredoc);
+		}
 
 		free(cmd);
 		cmd = tmp;

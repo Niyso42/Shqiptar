@@ -21,7 +21,7 @@ void	handle_word_cmd(t_cmd *cmd, t_token *token)
 	i = 0;
 	j = 0;
 	if (cmd->cmd == NULL)
-		cmd->cmd = token->content;
+		cmd->cmd = ft_strdup(token->content);
 	else
 	{
 		if (cmd->args == NULL)
@@ -29,7 +29,7 @@ void	handle_word_cmd(t_cmd *cmd, t_token *token)
 			cmd->args = malloc(sizeof(char *) * 2);
 			if (!cmd->args)
 				return ;
-			cmd->args[0] = token->content;
+			cmd->args[0] = ft_strdup(token->content);
 			cmd->args[1] = NULL;
 		}
 		else
@@ -45,7 +45,7 @@ void	handle_word_cmd(t_cmd *cmd, t_token *token)
 				tmp[j] = cmd->args[j];
 				j++;
 			}
-			tmp[j] = token->content;
+			tmp[j] = ft_strdup(token->content);
 			tmp[j + 1] = NULL;
 			free(cmd->args);
 			cmd->args = tmp;
@@ -171,7 +171,7 @@ void fill_heredocs_from_tokens(t_token *token, t_cmd *cmd)
 	{
 		if (token->type == HEREDOC && token->next)
 		{
-			cmd->heredoc[i] = token->next->content;
+			cmd->heredoc[i] = ft_strdup(token->next->content);
 			i++;
 		}
 		else if (token->type == PIPE)
