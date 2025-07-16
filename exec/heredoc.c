@@ -36,12 +36,13 @@ void allocate_heredoc(t_token *token, t_cmd *cmd)
 		current = current->next;
 	}
 }
+
 void process_heredocs(t_cmd *cmd, t_data *data)
 {
     t_cmd *tmp = cmd;
     while (tmp)
     {
-        if (tmp->heredoc)
+        if (tmp->nb_heredoc > 0) 
         {
             if (create_heredoc_pipe(tmp, data) == -1)
                 error_handling(3, data);
@@ -85,6 +86,7 @@ int create_heredoc_pipe(t_cmd *cmd, t_data *data)
 	signal(SIGQUIT, SIG_IGN);
     if (pid == 0)
     {
+        close(fds[0]);
         disable_echoctl();
         signal(SIGINT, SIG_DFL);
         char *line;

@@ -268,6 +268,17 @@ void execute_all_cmd(t_cmd *cmd, t_data *data)
         i++;
     }
 
+    t_cmd *cleanup_cmd = head;
+    while (cleanup_cmd)
+    {
+        if (cleanup_cmd->heredoc_fd > 0)
+        {
+            close(cleanup_cmd->heredoc_fd);
+            cleanup_cmd->heredoc_fd = 0;
+        }
+        cleanup_cmd = cleanup_cmd->next;
+    }
+
     signal(SIGINT, handle_sigint);
     signal(SIGQUIT, SIG_IGN);
 }
