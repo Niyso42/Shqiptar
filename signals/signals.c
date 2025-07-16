@@ -12,7 +12,7 @@
 
 #include "../includes/minishell.h"
 
-void handle_sigint(int sig)
+void	handle_sigint(int sig)
 {
 	(void)sig;
 	rl_replace_line("", 0);
@@ -22,7 +22,7 @@ void handle_sigint(int sig)
 	g_exit_status = 130;
 }
 
-void handle_sigint_status (t_data *data)
+void	handle_sigint_status(t_data *data)
 {
 	if (g_exit_status == 130)
 	{

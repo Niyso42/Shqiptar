@@ -85,6 +85,25 @@ typedef struct s_data
 	int				should_exit;
 }					t_data;
 
+typedef struct s_token_ctx
+{
+	char			*prompt;
+	t_token			**head;
+	char			*buffer;
+	int				*i;
+	int				*j;
+	int				quote_state;
+}					t_token_ctx;
+
+typedef struct s_tokenize_vars
+{
+	t_token			**head;
+	char			*buffer;
+	int				i;
+	int				j;
+	int				quote_state;
+}					t_tokenize_vars;
+
 void				copy_env(t_data *data, char **envp);
 void				execute_cmd(char *path, char **argv, t_data *data);
 char				*prepare_path(char *cmd, t_data *data);

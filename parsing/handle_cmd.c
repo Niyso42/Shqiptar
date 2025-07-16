@@ -12,44 +12,49 @@
 
 #include "../includes/minishell.h"
 
-void	handle_word_cmd(t_cmd *cmd, t_token *token)
+static void	init_first_arg(t_cmd *cmd, t_token *token)
+{
+	cmd->args = malloc(sizeof(char *) * 2);
+	if (!cmd->args)
+		return ;
+	cmd->args[0] = ft_strdup(token->content);
+	cmd->args[1] = NULL;
+}
+
+static void	add_arg_to_existing(t_cmd *cmd, t_token *token)
 {
 	int		i;
 	char	**tmp;
 	int		j;
 
 	i = 0;
+	while (cmd->args[i])
+		i++;
+	tmp = malloc(sizeof(char *) * (i + 2));
+	if (!tmp)
+		return ;
 	j = 0;
+	while (j < i)
+	{
+		tmp[j] = cmd->args[j];
+		j++;
+	}
+	tmp[j] = ft_strdup(token->content);
+	tmp[j + 1] = NULL;
+	free(cmd->args);
+	cmd->args = tmp;
+}
+
+void	handle_word_cmd(t_cmd *cmd, t_token *token)
+{
 	if (cmd->cmd == NULL)
 		cmd->cmd = ft_strdup(token->content);
 	else
 	{
 		if (cmd->args == NULL)
-		{
-			cmd->args = malloc(sizeof(char *) * 2);
-			if (!cmd->args)
-				return ;
-			cmd->args[0] = ft_strdup(token->content);
-			cmd->args[1] = NULL;
-		}
+			init_first_arg(cmd, token);
 		else
-		{
-			while (cmd->args[i])
-				i++;
-			tmp = malloc(sizeof(char *) * (i + 2));
-			if (!tmp)
-				return ;
-			j = 0;
-			while (j < i)
-			{
-				tmp[j] = cmd->args[j];
-				j++;
-			}
-			tmp[j] = ft_strdup(token->content);
-			tmp[j + 1] = NULL;
-			free(cmd->args);
-			cmd->args = tmp;
-		}
+			add_arg_to_existing(cmd, token);
 	}
 }
 
@@ -72,6 +77,35 @@ t_cmd	*init_struct(void)
 	return (new_cmd);
 }
 
+static int	init_exit_data(t_data *data)
+{
+	data->exit = malloc(sizeof(t_exit));
+	if (!data->exit)
+		return (0);
+	data->exit->exit = malloc(sizeof(int));
+	if (!data->exit->exit)
+	{
+		free(data->exit);
+		return (0);
+	}
+	*data->exit->exit = 0;
+	return (1);
+}
+
+static int	init_env_data(t_data *data, char **envp)
+{
+	data->env = malloc(sizeof(t_env));
+	if (!data->env)
+		return (0);
+	copy_env(data, envp);
+	if (!data->env->env)
+	{
+		free(data->env);
+		return (0);
+	}
+	return (1);
+}
+
 t_data	*init_data(char **envp)
 {
 	t_data	*data;
@@ -79,34 +113,17 @@ t_data	*init_data(char **envp)
 	data = malloc(sizeof(t_data));
 	if (!data)
 		return (NULL);
-
-	data->exit = malloc(sizeof(t_exit));
-	if (!data->exit)
+	if (!init_exit_data(data))
 		return (free(data), NULL);
-
-	data->exit->exit = malloc(sizeof(int));
-	if (!data->exit->exit)
-		return (free(data->exit), free(data), NULL);
-	*data->exit->exit = 0;
-
-	data->env = malloc(sizeof(t_env));
-	if (!data->env)
-		return (free(data->exit->exit), free(data->exit), free(data), NULL);
-
-	copy_env(data, envp);
-	if (!data->env->env)
+	if (!init_env_data(data, envp))
 	{
-		free(data->env);
 		free(data->exit->exit);
 		free(data->exit);
-		free(data);
-		return (NULL);
+		return (free(data), NULL);
 	}
-
 	data->token = NULL;
 	data->cmd = NULL;
 	data->should_exit = 0;
-
 	return (data);
 }
 
@@ -262,34 +279,3 @@ char	**build_argv(t_cmd *cmd)
 	return (argv);
 }
 
-void print_cmds(t_cmd *cmd)
-{
-    int i;
-
-    while (cmd)
-    {
-        printf("Commande: %s\n", cmd->cmd ? cmd->cmd : "(null)");
-
-        printf("Arguments: ");
-        if (cmd->args)
-        {
-            i = 0;
-            while (cmd->args[i])
-            {
-                printf("[%s] ", cmd->args[i]);
-                i++;
-            }
-        }
-        else
-            printf("(none)");
-        printf("\n");
-
-        printf("Infile: %s\n", cmd->infile ? cmd->infile : "(stdin)");
-        printf("Outfile: %s\n", cmd->outfile ? cmd->outfile : "(stdout)");
-        printf("Append: %s\n", cmd->append ? "true" : "false");
-
-        printf("------\n");
-
-        cmd = cmd->next;
-    }
-}

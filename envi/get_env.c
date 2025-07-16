@@ -12,34 +12,34 @@
 
 #include "../includes/minishell.h"
 
-void copy_env(t_data *data, char **envp)
+void	copy_env(t_data *data, char **envp)
 {
-    int i;
-    int j;
+	int	i;
+	int	j;
 
-    if (!data || !envp)
-        return;
-    i = 0;
-    while (envp[i])
-        i++;
-    data->env->env = (char **)malloc(sizeof(char *) * (i + 1));
-    if (!data->env->env)
-        return;
-    j = 0;
-    while (j < i)
-    {
-        data->env->env[j] = ft_strdup(envp[j]);
-        if (!data->env->env[j])
-        {
-            while (j-- > 0)
-                free(data->env->env[j]);
-            free(data->env->env);
-            data->env->env = NULL;
-            return;
-        }
-        j++;
-    }
-    data->env->env[j] = NULL;
+	if (!data || !envp)
+		return ;
+	i = 0;
+	while (envp[i])
+		i++;
+	data->env->env = (char **)malloc(sizeof(char *) * (i + 1));
+	if (!data->env->env)
+		return ;
+	j = 0;
+	while (j < i)
+	{
+		data->env->env[j] = ft_strdup(envp[j]);
+		if (!data->env->env[j])
+		{
+			while (j-- > 0)
+				free(data->env->env[j]);
+			free(data->env->env);
+			data->env->env = NULL;
+			return ;
+		}
+		j++;
+	}
+	data->env->env[j] = NULL;
 }
 
 int	error_handling(int err, t_data *data)
@@ -70,32 +70,51 @@ void	free_tab(char **str)
 	free(str);
 }
 
-char *get_path(char *cmd, t_data *data, char **argv)
+static char	*find_path_env(t_data *data)
 {
-    int i;
-    char **path;
-    char *good_path;
-    char *temp;
+	int	i;
 
-    (void)argv;
-    i = 0;
-    while (data->env->env[i] && ft_strncmp(data->env->env[i], "PATH=", 5) != 0)
-        i++;
-    if (!data->env->env[i])
-        return (NULL);
-    path = ft_split(data->env->env[i] + 5, ':');
-    i = 0;
-    while (path[i])
-    {
-        temp = ft_strjoin(path[i], "/");
-        good_path = ft_strjoin(temp, cmd);
-        free(temp);
-        if (access(good_path, X_OK) == 0)
-            return (free_tab(path), good_path);
-        i++;
-        free(good_path);
-    }
-    free_tab(path);
-    return (NULL);
+	i = 0;
+	while (data->env->env[i] && ft_strncmp(data->env->env[i], "PATH=", 5) != 0)
+		i++;
+	if (!data->env->env[i])
+		return (NULL);
+	return (data->env->env[i] + 5);
+}
+
+static char	*build_full_path(char *dir, char *cmd)
+{
+	char	*temp;
+	char	*full_path;
+
+	temp = ft_strjoin(dir, "/");
+	full_path = ft_strjoin(temp, cmd);
+	free(temp);
+	return (full_path);
+}
+
+char	*get_path(char *cmd, t_data *data, char **argv)
+{
+	int		i;
+	char	**path;
+	char	*good_path;
+	char	*path_env;
+
+	(void)argv;
+	path_env = find_path_env(data);
+	if (!path_env)
+		return (NULL);
+	path = ft_split(path_env, ':');
+	i = 0;
+	while (path[i])
+	{
+		good_path = build_full_path(path[i], cmd);
+		if (access(good_path, X_OK) == 0)
+			return (free_tab(path), good_path);
+		free(good_path);
+		i++;
+	}
+	free_tab(path);
+	return (NULL);
 }
 

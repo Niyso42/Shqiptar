@@ -59,7 +59,7 @@ void	handle_redout(t_token **head, char buffer[BUFFER_SIZE], int *i, int *j)
 	(*j)++;
 }
 
-void handle_append(t_token **head, char buffer[BUFFER_SIZE], int *i, int *j)
+void	handle_append(t_token **head, char buffer[BUFFER_SIZE], int *i, int *j)
 {
 	if (*i > 0)
 	{
@@ -70,7 +70,8 @@ void handle_append(t_token **head, char buffer[BUFFER_SIZE], int *i, int *j)
 	add_token(head, ">>", APPEND);
 	(*j) += 2;
 }
-void handle_heredoc(t_token **head, char buffer[BUFFER_SIZE], int *i, int *j)
+
+void	handle_heredoc(t_token **head, char buffer[BUFFER_SIZE], int *i, int *j)
 {
 	if (*i > 0)
 	{
