@@ -61,6 +61,7 @@ typedef struct s_exec_context
 	int				*fds;
 	int				index;
 	int				is_last;
+	int				total_cmds;
 }					t_exec_context;
 
 typedef struct s_cmd
@@ -173,8 +174,8 @@ void				redirect_input(t_cmd *cmd, int *fds, int index);
 void				redirect_output(t_cmd *cmd, int *fds, int index,
 						int is_last);
 void				execute_one_cmd(t_cmd *cmd, t_exec_context *ctx,
-						t_data *data);
-void 				execute_all_cmd(t_cmd *cmd, t_data *data);
+						t_data *data, t_token *tokens, t_cmd *all_cmds);
+void 				execute_all_cmd(t_cmd *cmd, t_data *data, t_token *tokens);
 void				handle_sigint(int sig);
 
 #endif

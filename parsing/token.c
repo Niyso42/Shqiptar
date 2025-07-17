@@ -166,6 +166,9 @@ t_token	*tokenize(char *prompt, t_data *data)
 			continue ;
 	}
 	if (!finalize_tokenize(&vars))
+	{
+		free_tokens(head);
 		return (NULL);
+	}
 	return (head);
 }

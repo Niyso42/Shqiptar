@@ -16,9 +16,8 @@ void	execute_cmd(char *path, char **argv, t_data *data)
 {
 	if (execve(path, argv, data->env->env) == -1)
 	{
-		free_tab(argv);
-		free(path);
-		error_handling(3, data);
+		perror("execve failed");
+		exit(126);
 	}
 }
 
@@ -28,7 +27,7 @@ char	*prepare_path(char *cmd, t_data *data)
 	char	**argv;
 
 	if (!cmd || !cmd[0])
-		error_handling(3, data);
+		return (NULL);
 	argv = ft_split(cmd, ' ');
 	if (access(argv[0], X_OK) == 0)
 		path = ft_strdup(argv[0]);
@@ -37,12 +36,12 @@ char	*prepare_path(char *cmd, t_data *data)
 	else
 	{
 		free_tab(argv);
-		error_handling(3, data);
+		return (NULL);
 	}
 	if (!path)
 	{
 		free_tab(argv);
-		error_handling(3, data);
+		return (NULL);
 	}
 	free_tab(argv);
 	return (path);
@@ -58,17 +57,15 @@ int	*malloc_fds(int n)
 	return (fds);
 }
 
-static int	count_commands(t_cmd *cmd)
+static int	count_all_commands(t_cmd *cmd)
 {
-	int		count;
-	t_cmd	*tmp;
+	int	count;
 
 	count = 0;
-	tmp = cmd;
-	while (tmp->next)
+	while (cmd)
 	{
 		count++;
-		tmp = tmp->next;
+		cmd = cmd->next;
 	}
 	return (count);
 }
@@ -95,11 +92,16 @@ int	create_fds(t_cmd *cmd, int **fds_out)
 	int	count;
 	int	*fds;
 
-	count = count_commands(cmd);
-	fds = malloc(sizeof(int) * 2 * count);
+	count = count_all_commands(cmd);
+	if (count <= 1)
+	{
+		*fds_out = NULL;
+		return (count);
+	}
+	fds = malloc(sizeof(int) * 2 * (count - 1));
 	if (!fds)
 		return (-1);
-	if (create_pipes(fds, count) == -1)
+	if (create_pipes(fds, count - 1) == -1)
 		return (-1);
 	*fds_out = fds;
 	return (count);
@@ -152,11 +154,13 @@ void	redirect_output(t_cmd *cmd, int *fds, int index, int is_last)
 	}
 }
 
-static void	handle_builtin_execution(char **argv, t_data *data)
+static void	handle_builtin_execution(char **argv, t_data *data, t_token *tokens, t_cmd *all_cmds)
 {
 	if (is_parent_builtin(argv[0]))
 	{
 		free_tab(argv);
+		free_cmd(all_cmds);
+		free_tokens(tokens);
 		free_data(data);
 		exit(0);
 	}
@@ -164,12 +168,14 @@ static void	handle_builtin_execution(char **argv, t_data *data)
 	{
 		exec_builtin(argv, data);
 		free_tab(argv);
+		free_cmd(all_cmds);
+		free_tokens(tokens);
 		free_data(data);
 		exit(0);
 	}
 }
 
-static void	handle_command_execution(char **argv, t_data *data)
+static void	handle_command_execution(char **argv, t_data *data, t_token *tokens, t_cmd *all_cmds)
 {
 	char	*path;
 
@@ -178,44 +184,52 @@ static void	handle_command_execution(char **argv, t_data *data)
 	{
 		ft_putstr_fd("Command not found\n", 2);
 		free_tab(argv);
+		free_cmd(all_cmds);
+		free_tokens(tokens);
 		free_data(data);
 		exit(127);
 	}
 	execute_cmd(path, argv, data);
 	free(path);
 	free_tab(argv);
+	free_cmd(all_cmds);
+	free_tokens(tokens);
 	free_data(data);
 	exit(126);
 }
 
-void	execute_one_cmd(t_cmd *cmd, t_exec_context *ctx, t_data *data)
+void	execute_one_cmd(t_cmd *cmd, t_exec_context *ctx, t_data *data, t_token *tokens, t_cmd *all_cmds)
 {
 	char	**argv;
+	int		i;
 
 	redirect_input(cmd, ctx->fds, ctx->index);
 	redirect_output(cmd, ctx->fds, ctx->index, ctx->is_last);
+	
+	// Fermer tous les fds non utilisés et libérer le tableau
+	if (ctx->fds)
+	{
+		i = 0;
+		while (i < (ctx->total_cmds - 1) * 2)
+			close(ctx->fds[i++]);
+		free(ctx->fds);
+	}
+	
 	argv = build_argv(cmd);
 	if (!argv || !argv[0])
 	{
 		free_tab(argv);
+		free_cmd(all_cmds);
+		free_tokens(tokens);
 		free_data(data);
 		exit(0);
 	}
-	handle_builtin_execution(argv, data);
-	handle_command_execution(argv, data);
-}
-
-static int	count_all_commands(t_cmd *cmd)
-{
-	int	count;
-
-	count = 0;
-	while (cmd)
-	{
-		count++;
-		cmd = cmd->next;
-	}
-	return (count);
+	handle_builtin_execution(argv, data, tokens, all_cmds);
+	handle_command_execution(argv, data, tokens, all_cmds);
+	free_tab(argv);
+	free_cmd(all_cmds);
+	free_tokens(tokens);
+	free_data(data);
 }
 
 static int	handle_single_builtin(t_cmd *cmd, t_data *data)
@@ -316,7 +330,7 @@ static void	cleanup_heredocs(t_cmd *head)
 	}
 }
 
-static pid_t	fork_and_execute(t_cmd *cmd, t_exec_context *ctx, t_data *data)
+static pid_t	fork_and_execute(t_cmd *cmd, t_exec_context *ctx, t_data *data, t_token *tokens, t_cmd *all_cmds)
 {
 	pid_t	pid;
 
@@ -324,13 +338,13 @@ static pid_t	fork_and_execute(t_cmd *cmd, t_exec_context *ctx, t_data *data)
 	if (pid == 0)
 	{
 		setup_signals_child();
-		execute_one_cmd(cmd, ctx, data);
+		execute_one_cmd(cmd, ctx, data, tokens, all_cmds);
 		exit(0);
 	}
 	return (pid);
 }
 
-void	execute_all_cmd(t_cmd *cmd, t_data *data)
+void	execute_all_cmd(t_cmd *cmd, t_data *data, t_token *tokens)
 {
 	int				count;
 	pid_t			last_pid;
@@ -351,11 +365,11 @@ void	execute_all_cmd(t_cmd *cmd, t_data *data)
 	last_pid = -1;
 	while (cmd)
 	{
-		ctx = (t_exec_context){fds, index, (index == count - 1)};
+		ctx = (t_exec_context){fds, index, (index == count - 1), count};
 		if (ctx.is_last)
-			last_pid = fork_and_execute(cmd, &ctx, data);
+			last_pid = fork_and_execute(cmd, &ctx, data, tokens, head);
 		else
-			fork_and_execute(cmd, &ctx, data);
+			fork_and_execute(cmd, &ctx, data, tokens, head);
 		close_pipe_fds(fds, index, count);
 		index++;
 		cmd = cmd->next;

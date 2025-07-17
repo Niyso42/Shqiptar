@@ -55,17 +55,16 @@ int handle_no_command(t_cmd *cmds, t_data *data, t_token *tokens, char *prompt)
 {
     t_cmd *check = cmds;
 
+    (void)prompt;
     while (check)
     {
         if (check->cmd != NULL)
             return 0; 
         check = check->next;
     }
-    printf("No command detected, freeing tokens...\n");
     free_cmd(cmds);
     *data->exit->exit = 0; 
     free_tokens(tokens);
-    free(prompt);
     return 1;
 }
 

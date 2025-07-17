@@ -32,12 +32,8 @@ static void	process_commands(t_data *data, char *prompt)
 	fill_heredocs_from_tokens(tokens, cmds);
 	process_heredocs(cmds, data);
 	if (handle_no_command(cmds, data, tokens, prompt))
-	{
-		free_tokens(tokens);
-		free_cmd(cmds);
 		return ;
-	}
-	execute_all_cmd(cmds, data);
+	execute_all_cmd(cmds, data, tokens);
 	free_tokens(tokens);
 	free_cmd(cmds);
 }
