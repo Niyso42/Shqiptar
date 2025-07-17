@@ -69,72 +69,106 @@ int handle_no_command(t_cmd *cmds, t_data *data, t_token *tokens, char *prompt)
     return 1;
 }
 
+void handle_heredoc_eof(char *delimiter)
+{
+    ft_putchar_fd('\n', 1);
+    ft_putstr_fd("bash: warning: here-document delimited by end-of-file (wanted `", 2);
+    ft_putstr_fd(delimiter, 2);
+    ft_putstr_fd("')\n", 2);
+}
+
+int process_heredoc_line(char *line, char *delimiter, int fd, int is_last)
+{
+    if (line[ft_strlen(line) - 1] == '\n')
+        line[ft_strlen(line) - 1] = '\0';
+    
+    if (ft_strcmp(line, delimiter) == 0)
+    {
+        free(line);
+        return (1);
+    }
+    
+    if (is_last)
+    {
+        ft_putstr_fd(line, fd);
+        ft_putstr_fd("\n", fd);
+    }
+    free(line);
+    return (0);
+}
+
+void heredoc_child_process(t_cmd *cmd, int write_fd)
+{
+    char *line;
+    int i = 0;
+
+    disable_echoctl();
+    signal(SIGINT, SIG_DFL);
+    
+    while (i < cmd->nb_heredoc)
+    {
+        while (1)
+        {
+            ft_putstr_fd("> ", 1);
+            line = get_next_line(0);
+            if (!line)
+            {
+                handle_heredoc_eof(cmd->heredoc[i]);
+                break;
+            }
+            if (process_heredoc_line(line, cmd->heredoc[i], write_fd, 
+                                   (i == cmd->nb_heredoc - 1)))
+                break;
+        }
+        i++;
+    }
+    close(write_fd);
+    exit(0);
+}
+
+int handle_heredoc_parent(pid_t pid, int *fds, t_data *data)
+{
+    int status;
+
+    close(fds[1]);
+    waitpid(pid, &status, 0);
+    enable_echoctl();
+    signal(SIGINT, handle_sigint);
+    signal(SIGQUIT, SIG_IGN);
+    
+    if (WIFSIGNALED(status) && WTERMSIG(status) == SIGINT)
+    {
+        write(STDOUT_FILENO, "\n", 1);
+        *data->exit->exit = 130;
+        return (1);
+    }
+    return (0);
+}
+
 int create_heredoc_pipe(t_cmd *cmd, t_data *data)
 {
     int fds[2];
     pid_t pid;
-    int status;
-    int i = 0;
 
     if (pipe(fds) == -1)
         return (-1);
+    
     pid = fork();
     if (pid == -1)
         return (-1);
 
     signal(SIGINT, SIG_IGN);
-	signal(SIGQUIT, SIG_IGN);
+    signal(SIGQUIT, SIG_IGN);
+    
     if (pid == 0)
     {
         close(fds[0]);
-        disable_echoctl();
-        signal(SIGINT, SIG_DFL);
-        char *line;
-        
-        while (i < cmd->nb_heredoc)
-        {
-            while (1)
-            {
-                ft_putstr_fd("> ", 1);
-                line = get_next_line(0);
-                if (!line)
-                {
-                    ft_putchar_fd('\n', 1);
-                    ft_putstr_fd("bash: warning: here-document delimited by end-of-file (wanted `", 2);
-                    ft_putstr_fd(cmd->heredoc[i], 2);
-                    ft_putstr_fd("')\n", 2);
-                    break;
-                }
-                if (line[ft_strlen(line) - 1] == '\n')
-                    line[ft_strlen(line) - 1] = '\0';
-                if (ft_strcmp(line, cmd->heredoc[i]) == 0)
-                {
-                    free(line);
-                    break;
-                }
-                if (i == cmd->nb_heredoc - 1)
-                {
-                    ft_putstr_fd(line, fds[1]);
-                    ft_putstr_fd("\n", fds[1]);
-                }
-                free(line);
-            }
-            i++;
-        }
-		close(fds[1]);
-		exit(0);
+        heredoc_child_process(cmd, fds[1]);
     }
-	close(fds[1]);
-	waitpid(pid, &status, 0);
-    enable_echoctl(); 
-	signal(SIGINT, handle_sigint);
-	signal(SIGQUIT, SIG_IGN);
-    if (WIFSIGNALED(status) && WTERMSIG(status) == SIGINT)
-	{
-		write(STDOUT_FILENO, "\n", 1);
-		*data->exit->exit = 130;
-		return (1);
-	}
+    
+    if (handle_heredoc_parent(pid, fds, data) == 1)
+        return (1);
+    
     cmd->heredoc_fd = fds[0];
     return (0);
 }
