@@ -175,13 +175,39 @@ static void	handle_builtin_execution(char **argv, t_data *data, t_token *tokens,
 	}
 }
 
+static int	is_directory_path(char *cmd)
+{
+	if (!cmd)
+		return (0);
+	if (ft_strcmp(cmd, "/") == 0)
+		return (1);
+	if (ft_strcmp(cmd, "./") == 0)
+		return (1);
+	if (ft_strcmp(cmd, "../") == 0)
+		return (1);
+	return (0);
+}
+
 static void	handle_command_execution(char **argv, t_data *data, t_token *tokens, t_cmd *all_cmds)
 {
 	char	*path;
 
+	if (is_directory_path(argv[0]))
+	{
+		ft_putstr_fd("minishell: ", 2);
+		ft_putstr_fd(argv[0], 2);
+		ft_putstr_fd(": Is a directory\n", 2);
+		free_tab(argv);
+		free_cmd(all_cmds);
+		free_tokens(tokens);
+		free_data(data);
+		exit(126);
+	}
 	path = prepare_path(argv[0], data);
 	if (!path)
 	{
+		ft_putstr_fd(argv[0], 2);
+		ft_putstr_fd(": " , 2);
 		ft_putstr_fd("Command not found\n", 2);
 		free_tab(argv);
 		free_cmd(all_cmds);
