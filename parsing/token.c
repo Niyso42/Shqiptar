@@ -34,23 +34,22 @@ void	add_token(t_token **head, char *content, int type)
 	}
 }
 
-static void	handle_dollar_expansion(char *prompt, t_data *data, 
-	char *buffer, int *i, int *j)
+static void	handle_dollar_expansion(t_expand_ctx *ctx)
 {
 	char	*varname;
 	char	*value;
 	int		k;
 
-	(*j)++;
-	varname = get_dollar_value(prompt, *j);
-	value = get_env_value(varname, data);
+	(*ctx->j)++;
+	varname = get_dollar_value(ctx->prompt, *ctx->j);
+	value = get_env_value(varname, ctx->data);
 	k = 0;
 	if (value)
 	{
-		while (value[k] && *i < BUFFER_SIZE - 1)
-			buffer[(*i)++] = value[k++];
+		while (value[k] && *ctx->i < BUFFER_SIZE - 1)
+			ctx->buffer[(*ctx->i)++] = value[k++];
 	}
-	*j += ft_strlen(varname);
+	*ctx->j += ft_strlen(varname);
 	free(varname);
 	free(value);
 }
@@ -131,7 +130,10 @@ static int	process_token_char(char *prompt, t_data *data, t_tokenize_vars *vars)
 	if (handle_special_chars(&ctx))
 		return (1);
 	if (prompt[vars->j] == '$' && vars->quote_state != 1)
-		handle_dollar_expansion(prompt, data, vars->buffer, &vars->i, &vars->j);
+	{
+		t_expand_ctx expand_ctx = {prompt, data, vars->buffer, &vars->i, &vars->j};
+		handle_dollar_expansion(&expand_ctx);
+	}
 	else
 		vars->buffer[vars->i++] = prompt[vars->j++];
 	return (0);

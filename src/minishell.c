@@ -53,20 +53,22 @@ static int	handle_prompt_input(t_data *data, char *prompt)
 	return (0);
 }
 
-int	main(int ac, char **av, char **envp)
+static int	initialize_minishell(char **envp, t_data **data)
 {
-	char	*prompt;
-	t_data	*data;
-	int		exit_code;
-
-	(void)av;
-	if (ac != 1)
+	if (!envp)
 		return (1);
-	data = init_data(envp);
-	if (!data)
+	*data = init_data(envp);
+	if (!*data)
 		return (1);
 	signal(SIGINT, handle_sigint);
 	signal(SIGQUIT, SIG_IGN);
+	return (0);
+}
+
+static int	run_minishell_loop(t_data *data)
+{
+	char	*prompt;
+
 	while ((prompt = readline("minishell$ ")))
 	{
 		handle_sigint_status(data);
@@ -75,6 +77,20 @@ int	main(int ac, char **av, char **envp)
 		if (data->should_exit)
 			break ;
 	}
+	return (1);
+}
+
+int	main(int ac, char **av, char **envp)
+{
+	t_data	*data;
+	int		exit_code;
+
+	(void)av;
+	if (ac != 1)
+		return (1);
+	if (initialize_minishell(envp, &data))
+		return (1);
+	run_minishell_loop(data);
 	rl_clear_history();
 	exit_code = *data->exit->exit;
 	free_data(data);

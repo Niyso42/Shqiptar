@@ -107,30 +107,45 @@ static int	change_directory(char *path, char *oldpwd)
 	return (0);
 }
 
-void	ft_cd(char **args, t_data *data)
+static int	validate_cd_args(char **args, t_data *data)
 {
-	char	*oldpwd;
-
 	if (!args || !args[1])
 	{
 		ft_putstr_fd("cd: missing path argument\n", 2);
 		*data->exit->exit = 1;
-		return ;
+		return (0);
 	}
+	return (1);
+}
+
+static int	handle_cd_operations(char **args, t_data *data, char *oldpwd)
+{
+	if (change_directory(args[1], oldpwd) != 0)
+	{
+		*data->exit->exit = 1;
+		return (0);
+	}
+	if (update_pwd(data, oldpwd) != 0)
+	{
+		*data->exit->exit = 1;
+		return (0);
+	}
+	*data->exit->exit = 0;
+	return (1);
+}
+
+void	ft_cd(char **args, t_data *data)
+{
+	char	*oldpwd;
+
+	if (!validate_cd_args(args, data))
+		return ;
 	oldpwd = backup_current_dir();
 	if (!oldpwd)
 	{
 		*data->exit->exit = 1;
 		return ;
 	}
-	if (change_directory(args[1], oldpwd) != 0)
-	{
-		*data->exit->exit = 1;
-		return ;
-	}
-	if (update_pwd(data, oldpwd) != 0)
-		*data->exit->exit = 1;
-	else
-		*data->exit->exit = 0;
+	handle_cd_operations(args, data, oldpwd);
 	free(oldpwd);
 }

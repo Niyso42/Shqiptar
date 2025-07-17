@@ -96,33 +96,44 @@ int process_heredoc_line(char *line, char *delimiter, int fd, int is_last)
     return (0);
 }
 
+static void	setup_heredoc_child_signals(void)
+{
+	disable_echoctl();
+	signal(SIGINT, SIG_DFL);
+}
+
+static void	process_single_heredoc(t_cmd *cmd, int write_fd, int index)
+{
+	char	*line;
+
+	while (1)
+	{
+		ft_putstr_fd("> ", 1);
+		line = get_next_line(0);
+		if (!line)
+		{
+			handle_heredoc_eof(cmd->heredoc[index]);
+			break;
+		}
+		if (process_heredoc_line(line, cmd->heredoc[index], write_fd, 
+			(index == cmd->nb_heredoc - 1)))
+			break;
+	}
+}
+
 void heredoc_child_process(t_cmd *cmd, int write_fd)
 {
-    char *line;
-    int i = 0;
+	int	i;
 
-    disable_echoctl();
-    signal(SIGINT, SIG_DFL);
-    
-    while (i < cmd->nb_heredoc)
-    {
-        while (1)
-        {
-            ft_putstr_fd("> ", 1);
-            line = get_next_line(0);
-            if (!line)
-            {
-                handle_heredoc_eof(cmd->heredoc[i]);
-                break;
-            }
-            if (process_heredoc_line(line, cmd->heredoc[i], write_fd, 
-                                   (i == cmd->nb_heredoc - 1)))
-                break;
-        }
-        i++;
-    }
-    close(write_fd);
-    exit(0);
+	setup_heredoc_child_signals();
+	i = 0;
+	while (i < cmd->nb_heredoc)
+	{
+		process_single_heredoc(cmd, write_fd, i);
+		i++;
+	}
+	close(write_fd);
+	exit(0);
 }
 
 int handle_heredoc_parent(pid_t pid, int *fds, t_data *data)
@@ -144,30 +155,42 @@ int handle_heredoc_parent(pid_t pid, int *fds, t_data *data)
     return (0);
 }
 
+static int	setup_heredoc_pipe(int *fds)
+{
+	if (pipe(fds) == -1)
+		return (-1);
+	return (0);
+}
+
+static pid_t	fork_heredoc_process(void)
+{
+	pid_t	pid;
+
+	pid = fork();
+	if (pid == -1)
+		return (-1);
+	signal(SIGINT, SIG_IGN);
+	signal(SIGQUIT, SIG_IGN);
+	return (pid);
+}
+
 int create_heredoc_pipe(t_cmd *cmd, t_data *data)
 {
-    int fds[2];
-    pid_t pid;
+	int		fds[2];
+	pid_t	pid;
 
-    if (pipe(fds) == -1)
-        return (-1);
-    
-    pid = fork();
-    if (pid == -1)
-        return (-1);
-
-    signal(SIGINT, SIG_IGN);
-    signal(SIGQUIT, SIG_IGN);
-    
-    if (pid == 0)
-    {
-        close(fds[0]);
-        heredoc_child_process(cmd, fds[1]);
-    }
-    
-    if (handle_heredoc_parent(pid, fds, data) == 1)
-        return (1);
-    
-    cmd->heredoc_fd = fds[0];
-    return (0);
+	if (setup_heredoc_pipe(fds) == -1)
+		return (-1);
+	pid = fork_heredoc_process();
+	if (pid == -1)
+		return (-1);
+	if (pid == 0)
+	{
+		close(fds[0]);
+		heredoc_child_process(cmd, fds[1]);
+	}
+	if (handle_heredoc_parent(pid, fds, data) == 1)
+		return (1);
+	cmd->heredoc_fd = fds[0];
+	return (0);
 }

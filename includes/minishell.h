@@ -86,6 +86,31 @@ typedef struct s_data
 	int				should_exit;
 }					t_data;
 
+typedef struct s_pipeline_ctx
+{
+	t_data			*data;
+	t_token			*tokens;
+	int				*fds;
+	int				count;
+}					t_pipeline_ctx;
+
+typedef struct s_wait_ctx
+{
+	int				status;
+	pid_t			finished_pid;
+	pid_t			last_pid;
+	t_data			*data;
+}					t_wait_ctx;
+
+typedef struct s_expand_ctx
+{
+	char			*prompt;
+	t_data			*data;
+	char			*buffer;
+	int				*i;
+	int				*j;
+}					t_expand_ctx;
+
 typedef struct s_token_ctx
 {
 	char			*prompt;
@@ -174,7 +199,7 @@ void				redirect_input(t_cmd *cmd, int *fds, int index);
 void				redirect_output(t_cmd *cmd, int *fds, int index,
 						int is_last);
 void				execute_one_cmd(t_cmd *cmd, t_exec_context *ctx,
-						t_data *data, t_token *tokens, t_cmd *all_cmds);
+						t_data *data, t_token *tokens);
 void 				execute_all_cmd(t_cmd *cmd, t_data *data, t_token *tokens);
 void				handle_sigint(int sig);
 

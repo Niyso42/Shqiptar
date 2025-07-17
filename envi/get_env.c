@@ -12,34 +12,54 @@
 
 #include "../includes/minishell.h"
 
-void	copy_env(t_data *data, char **envp)
+static int	count_env_vars(char **envp)
 {
 	int	i;
-	int	j;
 
-	if (!data || !envp)
-		return ;
 	i = 0;
 	while (envp[i])
 		i++;
-	data->env->env = (char **)malloc(sizeof(char *) * (i + 1));
-	if (!data->env->env)
-		return ;
+	return (i);
+}
+
+static void	cleanup_env_allocation(char **env, int up_to)
+{
+	while (up_to-- > 0)
+		free(env[up_to]);
+	free(env);
+}
+
+static int	allocate_env_copy(t_data *data, char **envp, int count)
+{
+	int	j;
+
 	j = 0;
-	while (j < i)
+	while (j < count)
 	{
 		data->env->env[j] = ft_strdup(envp[j]);
 		if (!data->env->env[j])
 		{
-			while (j-- > 0)
-				free(data->env->env[j]);
-			free(data->env->env);
+			cleanup_env_allocation(data->env->env, j);
 			data->env->env = NULL;
-			return ;
+			return (0);
 		}
 		j++;
 	}
 	data->env->env[j] = NULL;
+	return (1);
+}
+
+void	copy_env(t_data *data, char **envp)
+{
+	int	count;
+
+	if (!data || !envp)
+		return ;
+	count = count_env_vars(envp);
+	data->env->env = (char **)malloc(sizeof(char *) * (count + 1));
+	if (!data->env->env)
+		return ;
+	allocate_env_copy(data, envp, count);
 }
 
 int	error_handling(int err, t_data *data)

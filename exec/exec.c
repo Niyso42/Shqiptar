@@ -12,6 +12,51 @@
 
 #include "../includes/minishell.h"
 
+static void	cleanup_and_exit(char **argv, t_data *data, int exit_code)
+{
+	free_tab(argv);
+	free_cmd(data->cmd);
+	free_tokens(data->token);
+	*data->exit->exit = exit_code;
+	free_data(data);
+	exit(exit_code);
+}
+
+static void	handle_directory_error(char **argv, t_data *data)
+{
+	ft_putstr_fd("minishell: ", 2);
+	ft_putstr_fd(argv[0], 2);
+	ft_putstr_fd(": Is a directory\n", 2);
+	cleanup_and_exit(argv, data, 126);
+}
+
+static void	handle_command_not_found(char **argv, t_data *data)
+{
+	ft_putstr_fd(argv[0], 2);
+	ft_putstr_fd(": ", 2);
+	ft_putstr_fd("Command not found\n", 2);
+	cleanup_and_exit(argv, data, 127);
+}
+
+static void	close_unused_fds(t_exec_context *ctx)
+{
+	int	i;
+
+	if (ctx->fds)
+	{
+		i = 0;
+		while (i < (ctx->total_cmds - 1) * 2)
+			close(ctx->fds[i++]);
+		free(ctx->fds);
+	}
+}
+
+static void	handle_empty_argv(char **argv, t_data *data)
+{
+	if (!argv || !argv[0])
+		cleanup_and_exit(argv, data, 0);
+}
+
 void	execute_cmd(char *path, char **argv, t_data *data)
 {
 	if (execve(path, argv, data->env->env) == -1)
@@ -154,24 +199,14 @@ void	redirect_output(t_cmd *cmd, int *fds, int index, int is_last)
 	}
 }
 
-static void	handle_builtin_execution(char **argv, t_data *data, t_token *tokens, t_cmd *all_cmds)
+static void	handle_builtin_execution(char **argv, t_data *data)
 {
 	if (is_parent_builtin(argv[0]))
-	{
-		free_tab(argv);
-		free_cmd(all_cmds);
-		free_tokens(tokens);
-		free_data(data);
-		exit(0);
-	}
+		cleanup_and_exit(argv, data, 0);
 	if (is_builtin(argv[0]))
 	{
 		exec_builtin(argv, data);
-		free_tab(argv);
-		free_cmd(all_cmds);
-		free_tokens(tokens);
-		free_data(data);
-		exit(0);
+		cleanup_and_exit(argv, data, 0);
 	}
 }
 
@@ -188,74 +223,34 @@ static int	is_directory_path(char *cmd)
 	return (0);
 }
 
-static void	handle_command_execution(char **argv, t_data *data, t_token *tokens, t_cmd *all_cmds)
+static void	handle_command_execution(char **argv, t_data *data)
 {
 	char	*path;
 
 	if (is_directory_path(argv[0]))
-	{
-		ft_putstr_fd("minishell: ", 2);
-		ft_putstr_fd(argv[0], 2);
-		ft_putstr_fd(": Is a directory\n", 2);
-		free_tab(argv);
-		free_cmd(all_cmds);
-		free_tokens(tokens);
-		free_data(data);
-		exit(126);
-	}
+		handle_directory_error(argv, data);
 	path = prepare_path(argv[0], data);
 	if (!path)
-	{
-		ft_putstr_fd(argv[0], 2);
-		ft_putstr_fd(": " , 2);
-		ft_putstr_fd("Command not found\n", 2);
-		free_tab(argv);
-		free_cmd(all_cmds);
-		free_tokens(tokens);
-		free_data(data);
-		exit(127);
-	}
+		handle_command_not_found(argv, data);
 	execute_cmd(path, argv, data);
 	free(path);
-	free_tab(argv);
-	free_cmd(all_cmds);
-	free_tokens(tokens);
-	free_data(data);
-	exit(126);
+	cleanup_and_exit(argv, data, 126);
 }
 
-void	execute_one_cmd(t_cmd *cmd, t_exec_context *ctx, t_data *data, t_token *tokens, t_cmd *all_cmds)
+void	execute_one_cmd(t_cmd *cmd, t_exec_context *ctx, t_data *data, t_token *tokens)
 {
 	char	**argv;
-	int		i;
 
+	data->token = tokens;
+	data->cmd = cmd;
 	redirect_input(cmd, ctx->fds, ctx->index);
 	redirect_output(cmd, ctx->fds, ctx->index, ctx->is_last);
-	
-	// Fermer tous les fds non utilisés et libérer le tableau
-	if (ctx->fds)
-	{
-		i = 0;
-		while (i < (ctx->total_cmds - 1) * 2)
-			close(ctx->fds[i++]);
-		free(ctx->fds);
-	}
-	
+	close_unused_fds(ctx);
 	argv = build_argv(cmd);
-	if (!argv || !argv[0])
-	{
-		free_tab(argv);
-		free_cmd(all_cmds);
-		free_tokens(tokens);
-		free_data(data);
-		exit(0);
-	}
-	handle_builtin_execution(argv, data, tokens, all_cmds);
-	handle_command_execution(argv, data, tokens, all_cmds);
-	free_tab(argv);
-	free_cmd(all_cmds);
-	free_tokens(tokens);
-	free_data(data);
+	handle_empty_argv(argv, data);
+	handle_builtin_execution(argv, data);
+	handle_command_execution(argv, data);
+	cleanup_and_exit(argv, data, 0);
 }
 
 static int	handle_single_builtin(t_cmd *cmd, t_data *data)
@@ -309,33 +304,34 @@ static void	close_all_fds(int *fds, int count)
 		free(fds);
 }
 
-static void	handle_wait_status(int status, pid_t finished_pid, 
-	pid_t last_pid, t_data *data)
+static void	handle_wait_status(t_wait_ctx *ctx)
 {
-	if (finished_pid == last_pid)
+	if (ctx->finished_pid == ctx->last_pid)
 	{
-		if (WIFEXITED(status))
-			*data->exit->exit = WEXITSTATUS(status);
-		else if (WIFSIGNALED(status))
-			*data->exit->exit = 128 + WTERMSIG(status);
-		if (WIFSIGNALED(status) && WTERMSIG(status) == SIGINT)
+		if (WIFEXITED(ctx->status))
+			*ctx->data->exit->exit = WEXITSTATUS(ctx->status);
+		else if (WIFSIGNALED(ctx->status))
+			*ctx->data->exit->exit = 128 + WTERMSIG(ctx->status);
+		if (WIFSIGNALED(ctx->status) && WTERMSIG(ctx->status) == SIGINT)
 			write(STDOUT_FILENO, "\n", 1);
-		if (WIFSIGNALED(status) && WTERMSIG(status) == SIGQUIT)
+		if (WIFSIGNALED(ctx->status) && WTERMSIG(ctx->status) == SIGQUIT)
 			write(STDOUT_FILENO, "Quit\n", 5);
 	}
 }
 
 static void	wait_for_children(int count, pid_t last_pid, t_data *data)
 {
-	int		i;
-	int		status;
-	pid_t	finished_pid;
+	int			i;
+	int			status;
+	pid_t		finished_pid;
+	t_wait_ctx	ctx;
 
 	i = 0;
 	while (i < count)
 	{
 		finished_pid = waitpid(-1, &status, 0);
-		handle_wait_status(status, finished_pid, last_pid, data);
+		ctx = (t_wait_ctx){status, finished_pid, last_pid, data};
+		handle_wait_status(&ctx);
 		i++;
 	}
 }
@@ -356,7 +352,7 @@ static void	cleanup_heredocs(t_cmd *head)
 	}
 }
 
-static pid_t	fork_and_execute(t_cmd *cmd, t_exec_context *ctx, t_data *data, t_token *tokens, t_cmd *all_cmds)
+static pid_t	fork_and_execute(t_cmd *cmd, t_exec_context *ctx, t_data *data, t_token *tokens)
 {
 	pid_t	pid;
 
@@ -364,44 +360,64 @@ static pid_t	fork_and_execute(t_cmd *cmd, t_exec_context *ctx, t_data *data, t_t
 	if (pid == 0)
 	{
 		setup_signals_child();
-		execute_one_cmd(cmd, ctx, data, tokens, all_cmds);
+		execute_one_cmd(cmd, ctx, data, tokens);
 		exit(0);
 	}
 	return (pid);
 }
 
+static int	setup_execution_context(t_cmd *cmd, t_data *data, int **fds)
+{
+	int	count;
+
+	count = count_all_commands(cmd);
+	if (count == 1 && handle_single_builtin(cmd, data))
+		return (0);
+	*fds = NULL;
+	if (count > 1 && create_fds(cmd, fds) == -1)
+		error_handling(6, data);
+	setup_signals_parent();
+	return (count);
+}
+
+static void	execute_pipeline(t_cmd *cmd, t_pipeline_ctx *ctx)
+{
+	pid_t			last_pid;
+	t_exec_context	exec_ctx;
+	int				index;
+	t_cmd			*current;
+
+	index = 0;
+	last_pid = -1;
+	current = cmd;
+	while (current)
+	{
+		exec_ctx = (t_exec_context){ctx->fds, index, (index == ctx->count - 1), ctx->count};
+		if (exec_ctx.is_last)
+			last_pid = fork_and_execute(current, &exec_ctx, ctx->data, ctx->tokens);
+		else
+			fork_and_execute(current, &exec_ctx, ctx->data, ctx->tokens);
+		close_pipe_fds(ctx->fds, index, ctx->count);
+		index++;
+		current = current->next;
+	}
+	close_all_fds(ctx->fds, ctx->count);
+	wait_for_children(ctx->count, last_pid, ctx->data);
+}
+
 void	execute_all_cmd(t_cmd *cmd, t_data *data, t_token *tokens)
 {
 	int				count;
-	pid_t			last_pid;
 	int				*fds;
 	t_cmd			*head;
-	t_exec_context	ctx;
-	int				index;
+	t_pipeline_ctx	ctx;
 
 	head = cmd;
-	count = count_all_commands(cmd);
-	if (count == 1 && handle_single_builtin(cmd, data))
+	count = setup_execution_context(cmd, data, &fds);
+	if (count == 0)
 		return ;
-	fds = NULL;
-	if (count > 1 && create_fds(cmd, &fds) == -1)
-		error_handling(6, data);
-	setup_signals_parent();
-	index = 0;
-	last_pid = -1;
-	while (cmd)
-	{
-		ctx = (t_exec_context){fds, index, (index == count - 1), count};
-		if (ctx.is_last)
-			last_pid = fork_and_execute(cmd, &ctx, data, tokens, head);
-		else
-			fork_and_execute(cmd, &ctx, data, tokens, head);
-		close_pipe_fds(fds, index, count);
-		index++;
-		cmd = cmd->next;
-	}
-	close_all_fds(fds, count);
-	wait_for_children(count, last_pid, data);
+	ctx = (t_pipeline_ctx){data, tokens, fds, count};
+	execute_pipeline(cmd, &ctx);
 	cleanup_heredocs(head);
 	restore_signals();
 }
