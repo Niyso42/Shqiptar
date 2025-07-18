@@ -174,3 +174,40 @@ t_token	*tokenize(char *prompt, t_data *data)
 	}
 	return (head);
 }
+
+int	validate_pipe_syntax(t_token *tokens)
+{
+	t_token	*current;
+	int		consecutive_pipes;
+
+	if (!tokens)
+		return (1);
+	if (tokens->type == PIPE)
+	{
+		ft_putstr_fd("bash: syntax error near unexpected token `|'\n", 2);
+		return (0);
+	}
+	current = tokens;
+	consecutive_pipes = 0;
+	while (current)
+	{
+		if (current->type == PIPE)
+		{
+			consecutive_pipes++;
+			if (consecutive_pipes >= 2)
+			{
+				ft_putstr_fd("bash: syntax error near unexpected token `||'\n", 2);
+				return (0);
+			}
+			if (!current->next)
+			{
+				ft_putstr_fd("bash: syntax error near unexpected token `|'\n", 2);
+				return (0);
+			}
+		}
+		else
+			consecutive_pipes = 0;
+		current = current->next;
+	}
+	return (1);
+}

@@ -22,6 +22,11 @@ static void	process_commands(t_data *data, char *prompt)
 	tokens = tokenize(prompt, data);
 	if (!tokens)
 		return ;
+	if (!validate_pipe_syntax(tokens))
+	{
+		free_tokens(tokens);
+		return ;
+	}
 	cmds = parse_tokens(tokens);
 	if (!cmds)
 	{

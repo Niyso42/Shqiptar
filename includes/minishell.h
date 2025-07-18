@@ -191,6 +191,7 @@ int 				create_heredoc_pipe(t_cmd *cmd, t_data *data);
 t_cmd				*init_struct(void);
 t_cmd				*parse_tokens(t_token *token);
 t_token 			*tokenize(char *prompt, t_data *data);
+int					validate_pipe_syntax(t_token *tokens);
 char				**build_argv(t_cmd *cmd);
 void				print_tokens(t_token *head);
 void				print_cmds(t_cmd *cmd);
