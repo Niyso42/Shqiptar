@@ -96,12 +96,11 @@ static char	*backup_current_dir(void)
 	return (oldpwd);
 }
 
-static int	change_directory(char *path, char *oldpwd)
+static int	change_directory(char *path)
 {
 	if (chdir(path) != 0)
 	{
 		perror("cd");
-		free(oldpwd);
 		return (1);
 	}
 	return (0);
@@ -120,7 +119,7 @@ static int	validate_cd_args(char **args, t_data *data)
 
 static int	handle_cd_operations(char **args, t_data *data, char *oldpwd)
 {
-	if (change_directory(args[1], oldpwd) != 0)
+	if (change_directory(args[1]) != 0)
 	{
 		*data->exit->exit = 1;
 		return (0);
