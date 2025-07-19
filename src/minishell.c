@@ -22,11 +22,6 @@ static void	process_commands(t_data *data, char *prompt)
 	tokens = tokenize(prompt, data);
 	if (!tokens)
 		return ;
-	if (!validate_pipe_syntax(tokens))
-	{
-		free_tokens(tokens);
-		return ;
-	}
 	cmds = parse_tokens(tokens);
 	if (!cmds)
 	{
@@ -36,8 +31,8 @@ static void	process_commands(t_data *data, char *prompt)
 	allocate_heredoc(tokens, cmds);
 	fill_heredocs_from_tokens(tokens, cmds);
 	process_heredocs(cmds, data);
-	if (handle_no_command(cmds, data, tokens, prompt))
-		return ;
+	// if (handle_no_command(cmds, data, tokens, prompt)) ;
+		// return ;
 	execute_all_cmd(cmds, data, tokens);
 	free_tokens(tokens);
 	free_cmd(cmds);
