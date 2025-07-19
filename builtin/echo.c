@@ -12,42 +12,37 @@
 
 #include "../includes/minishell.h"
 
-int	is_n_option(const char *str)
-{
-	int	i;
+int is_n_option(const char *str) {
+  int i;
 
-	if (!str || str[0] != '-' || str[1] != 'n')
-		return (0);
-	i = 2;
-	while (str[i])
-	{
-		if (str[i] != 'n')
-			return (0);
-		i++;
-	}
-	return (1);
+  if (!str || str[0] != '-' || str[1] != 'n')
+    return (0);
+  i = 2;
+  while (str[i]) {
+    if (str[i] != 'n')
+      return (0);
+    i++;
+  }
+  return (1);
 }
 
-void	ft_echo(char **args)
-{
-	int	i;
-	int	newline;
+void ft_echo(t_data *data, char **args) {
+  int i;
+  int newline;
 
-	i = 1;
-	newline = 1;
-	while (args[i] && is_n_option(args[i]))
-	{
-		newline = 0;
-		i++;
-	}
-	while (args[i])
-	{
-		ft_putstr_fd(args[i], 1);
-		if (args[i + 1])
-			ft_putchar_fd(' ', 1);
-		i++;
-	}
-	if (newline)
-		ft_putchar_fd('\n', 1);
-	g_exit_status = 0;
+  i = 1;
+  newline = 1;
+  while (args[i] && is_n_option(args[i])) {
+    newline = 0;
+    i++;
+  }
+  while (args[i]) {
+    ft_putstr_fd(args[i], 1);
+    if (args[i + 1])
+      ft_putchar_fd(' ', 1);
+    i++;
+  }
+  if (newline)
+    ft_putchar_fd('\n', 1);
+  *data->exit->exit = 0;
 }

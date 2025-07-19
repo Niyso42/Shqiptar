@@ -163,47 +163,57 @@ int create_fds(t_cmd *cmd, int **fds_out) {
   return (count);
 }
 
-void redirect_input(t_cmd *cmd, int *fds, int index) {
+int redirect_input(t_cmd *cmd, int *fds, int index) {
   int fd;
 
   if (cmd->infile != NULL) {
+    if (!access(cmd->infile, F_OK)) {
+      dprintf(2, "minishell: %s: Permission denied\n", cmd->infile);
+      return 0;
+    }
     fd = open(cmd->infile, O_RDONLY);
-    if (fd == -1)
-      return;
+    if (fd == -1) {
+      dprintf(2, "minishell: %s: No such file or directory\n", cmd->infile);
+      return 0;
+    }
     dup2(fd, 0);
     close(fd);
   } else if (cmd->heredoc) {
     dup2(cmd->heredoc_fd, 0);
     close(cmd->heredoc_fd);
-    return;
   } else if (index > 0) {
     dup2(fds[(index - 1) * 2], 0);
     close(fds[(index - 1) * 2]);
   }
+  return 1;
 }
 
-void redirect_output(t_cmd *cmd, int *fds, int index, int is_last) {
+int redirect_output(t_cmd *cmd, int *fds, int index, int is_last) {
   int fd;
 
   if (cmd->outfile != NULL) {
+    if (!access(cmd->outfile, F_OK)) {
+      dprintf(2, "minishell: %s: Permission denied\n", cmd->outfile);
+      return 0;
+    }
     if (cmd->append == 0)
       fd = open(cmd->outfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
     else
       fd = open(cmd->outfile, O_WRONLY | O_CREAT | O_APPEND, 0777);
-    if (fd == -1)
-      return;
+    if (fd == -1) {
+      dprintf(2, "minishell: %s: No such file or directory\n", cmd->outfile);
+      return 0;
+    }
     dup2(fd, 1);
     close(fd);
   } else if (!is_last) {
     dup2(fds[index * 2 + 1], 1);
     close(fds[index * 2 + 1]);
   }
+  return 1;
 }
 
 static void handle_builtin_execution(char **argv, t_data *data) {
-  // if (is_parent_builtin(argv[0])) {
-  //   cleanup_and_exit(argv, data, 0);
-  // }
   if (is_builtin(argv[0]) || is_parent_builtin(argv[0])) {
     exec_builtin(argv, data);
     cleanup_and_exit(argv, data, *data->exit->exit);
@@ -249,39 +259,6 @@ void execute_one_cmd(t_cmd *cmd, t_exec_context *ctx, t_data *data,
   handle_command_execution(argv, data);
   cleanup_and_exit(argv, data, 0);
 }
-
-// void execute_single_cmd(t_cmd *cmd, t_exec_context *ctx, t_data *data,
-//                      t_token *tokens) {
-//   char **argv;
-
-//   data->token = tokens;
-//   data->cmd = cmd;
-//   redirect_input(cmd, ctx->fds, ctx->index);
-//   redirect_output(cmd, ctx->fds, ctx->index, ctx->is_last);
-//   close_unused_fds(ctx);
-//   argv = build_argv(cmd);
-//   if (!1)
-//     return;
-//   if (is_builtin(argv[0]) || is_parent_builtin(argv[0]))
-//     return (exec_builtin(argv, data));
-//   // handle_builtin_execution(argv, data) {
-//   handle_command_execution(argv, data);
-//   cleanup_and_exit(argv, data, 0);
-// }
-
-// if (is_builtin(argv[0]) || is_parent_builtin(argv[0]))
-
-// static int handle_single_builtin(t_cmd *cmd, t_data *data) {
-//   char **argv;
-
-//   if (cmd->cmd && is_parent_builtin(cmd->cmd)) {
-//     argv = build_argv(cmd);
-//     exec_builtin(argv, data);
-//     free_tab(argv);
-//     return (1);
-//   }
-//   return (0);
-// }
 
 static void setup_signals_parent(void) {
   signal(SIGINT, SIG_IGN);
@@ -369,11 +346,6 @@ static pid_t fork_and_execute(t_cmd *cmd, t_exec_context *ctx, t_data *data,
   return (pid);
 }
 
-// static void execute_no_fork(t_cmd *cmd, t_exec_context *ctx, t_data *data,
-//                               t_token *tokens) {
-//   execute_one_cmd(cmd, ctx, data, tokens);
-// }
-
 static int setup_execution_context(t_cmd *cmd, t_data *data, int **fds) {
   int count;
 
@@ -385,13 +357,6 @@ static int setup_execution_context(t_cmd *cmd, t_data *data, int **fds) {
   return (count);
 }
 
-// static void execute_single(t_cmd *cmd, t_pipeline_ctx *ctx) {
-//   t_exec_context exec_ctx;
-
-//   exec_ctx = (t_exec_context){ctx->fds, 0, 1 == 1, 1};
-//   execute_one_cmd(cmd, &exec_ctx, ctx->data, ctx->tokens);
-// }
-
 static void execute_single_builtin(t_cmd *cmd, t_exec_context *ctx,
                                    t_data *data, char **argv) {
   int stdin;
@@ -399,8 +364,21 @@ static void execute_single_builtin(t_cmd *cmd, t_exec_context *ctx,
 
   stdin = dup(STDIN_FILENO);
   stdout = dup(STDOUT_FILENO);
-  redirect_input(cmd, NULL, ctx->index);
-  redirect_output(cmd, NULL, ctx->index, 1 == 1);
+  if (!redirect_input(cmd, NULL, ctx->index)) {
+    dup2(stdin, STDIN_FILENO);
+    dup2(stdout, STDOUT_FILENO);
+    close(stdin);
+    close(stdout);
+    *data->exit->exit = 1;
+    return;
+  } else if (!redirect_output(cmd, NULL, ctx->index, 1 == 1)) {
+    dup2(stdin, STDIN_FILENO);
+    dup2(stdout, STDOUT_FILENO);
+    close(stdin);
+    close(stdout);
+    *data->exit->exit = 1;
+    return;
+  }
   if (argv && argv[0]) {
     exec_builtin(argv, data);
   }
