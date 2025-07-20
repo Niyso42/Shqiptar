@@ -43,9 +43,9 @@ static void add_arg_to_existing(t_cmd *cmd, t_token *token) {
 }
 
 void handle_word_cmd(t_cmd *cmd, t_token *token) {
-  if (cmd->cmd == NULL)
+  if (cmd->cmd == NULL) {
     cmd->cmd = ft_strdup(token->content);
-  else {
+  } else {
     if (cmd->args == NULL)
       init_first_arg(cmd, token);
     else

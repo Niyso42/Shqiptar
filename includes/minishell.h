@@ -184,5 +184,5 @@ void execute_one_cmd(t_cmd *cmd, t_exec_context *ctx, t_data *data,
                      t_token *tokens);
 void execute_all_cmd(t_cmd *cmd, t_data *data, t_token *tokens);
 void handle_sigint(int sig);
-
+void free_single_cmd(t_cmd *cmd);
 #endif

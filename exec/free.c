@@ -12,103 +12,89 @@
 
 #include "../includes/minishell.h"
 
-static void	free_cmd_args(char **args)
-{
-	int	i;
+static void free_cmd_args(char **args) {
+  int i;
 
-	if (!args)
-		return ;
-	i = 0;
-	while (args[i])
-	{
-		free(args[i]);
-		i++;
-	}
-	free(args);
+  if (!args)
+    return;
+  i = 0;
+  while (args[i]) {
+    free(args[i]);
+    i++;
+  }
+  free(args);
 }
 
-static void	free_cmd_heredoc(char **heredoc, int nb_heredoc)
-{
-	int	i;
+static void free_cmd_heredoc(char **heredoc, int nb_heredoc) {
+  int i;
 
-	if (!heredoc)
-		return ;
-	i = 0;
-	while (i < nb_heredoc && heredoc[i])
-	{
-		free(heredoc[i]);
-		i++;
-	}
-	free(heredoc);
+  if (!heredoc)
+    return;
+  i = 0;
+  while (i < nb_heredoc && heredoc[i]) {
+    free(heredoc[i]);
+    i++;
+  }
+  free(heredoc);
 }
 
-static void	free_single_cmd(t_cmd *cmd)
-{
-	if (cmd->cmd)
-		free(cmd->cmd);
-	free_cmd_args(cmd->args);
-	if (cmd->infile)
-		free(cmd->infile);
-	if (cmd->outfile)
-		free(cmd->outfile);
-	free_cmd_heredoc(cmd->heredoc, cmd->nb_heredoc);
-	free(cmd);
+void free_single_cmd(t_cmd *cmd) {
+  if (cmd->cmd)
+    free(cmd->cmd);
+  free_cmd_args(cmd->args);
+  if (cmd->infile)
+    free(cmd->infile);
+  if (cmd->outfile)
+    free(cmd->outfile);
+  free_cmd_heredoc(cmd->heredoc, cmd->nb_heredoc);
+  free(cmd);
 }
 
-void	free_cmd(t_cmd *cmd)
-{
-	t_cmd	*tmp;
+void free_cmd(t_cmd *cmd) {
+  t_cmd *tmp;
 
-	while (cmd)
-	{
-		tmp = cmd->next;
-		free_single_cmd(cmd);
-		cmd = tmp;
-	}
+  while (cmd) {
+    tmp = cmd->next;
+    free_single_cmd(cmd);
+    cmd = tmp;
+  }
 }
 
-void	free_tokens(t_token *token)
-{
-	t_token	*tmp;
+void free_tokens(t_token *token) {
+  t_token *tmp;
 
-	while (token)
-	{
-		tmp = token->next;
-		free(token->content);
-		free(token);
-		token = tmp;
-	}
+  while (token) {
+    tmp = token->next;
+    free(token->content);
+    free(token);
+    token = tmp;
+  }
 }
 
-void	free_env(t_env *env)
-{
-	int	i;
+void free_env(t_env *env) {
+  int i;
 
-	i = 0;
-	if (!env || !env->env)
-		return ;
-	while (env->env[i])
-	{
-		free(env->env[i]);
-		i++;
-	}
-	free(env->env);
+  i = 0;
+  if (!env || !env->env)
+    return;
+  while (env->env[i]) {
+    free(env->env[i]);
+    i++;
+  }
+  free(env->env);
 }
 
-void	free_data(t_data *data)
-{
-	if (!data)
-		return ;
-	if (data->exit)
-	{
-		if (data->exit->exit)
-			free(data->exit->exit);
-		free(data->exit);
-	}
-	if (data->env)
-	{
-		free_env(data->env);
-		free(data->env);
-	}
-	free(data);
+void free_data(t_data *data) {
+  if (!data)
+    return;
+  if (data->exit) {
+    if (data->exit->exit)
+      free(data->exit->exit);
+    free(data->exit);
+  }
+  if (data->env) {
+    free_env(data->env);
+    free(data->env);
+  }
+  free(data);
 }

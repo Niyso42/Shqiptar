@@ -167,8 +167,9 @@ int redirect_input(t_cmd *cmd, int *fds, int index) {
   int fd;
 
   if (cmd->infile != NULL) {
-    if (!access(cmd->infile, F_OK)) {
-      dprintf(2, "minishell: %s: Permission denied\n", cmd->infile);
+    if (access(cmd->infile, R_OK) == -1) {
+      dprintf(2, "minishell: %s: ", cmd->infile);
+      perror("");
       return 0;
     }
     fd = open(cmd->infile, O_RDONLY);
@@ -179,8 +180,10 @@ int redirect_input(t_cmd *cmd, int *fds, int index) {
     dup2(fd, 0);
     close(fd);
   } else if (cmd->heredoc) {
-    dup2(cmd->heredoc_fd, 0);
-    close(cmd->heredoc_fd);
+    if (cmd->heredoc_fd != STDIN_FILENO) {
+      dup2(cmd->heredoc_fd, 0);
+      close(cmd->heredoc_fd);
+    }
   } else if (index > 0) {
     dup2(fds[(index - 1) * 2], 0);
     close(fds[(index - 1) * 2]);
@@ -244,10 +247,36 @@ static void handle_command_execution(char **argv, t_data *data) {
   cleanup_and_exit(argv, data, 126);
 }
 
+static void clean_before_token(t_token *token_to_clean, t_token *token_final) {
+  t_token *tmp;
+  if (!token_to_clean || token_final)
+    return;
+  while (token_to_clean != token_final) {
+    tmp = token_to_clean->next;
+    free(token_to_clean->content);
+    free(token_to_clean);
+    token_to_clean = tmp;
+  }
+}
+
+static void clean_before_cmd(t_cmd *cmd_to_clean, t_cmd *cmd_final) {
+  t_cmd *tmp;
+
+  if (!cmd_to_clean || !cmd_final)
+    return;
+  while (cmd_to_clean != cmd_final) {
+    tmp = cmd_to_clean->next;
+    free_single_cmd(cmd_to_clean);
+    cmd_to_clean = tmp;
+  }
+}
+
 void execute_one_cmd(t_cmd *cmd, t_exec_context *ctx, t_data *data,
                      t_token *tokens) {
   char **argv;
 
+  clean_before_token(data->token, tokens);
+  clean_before_cmd(data->cmd, cmd);
   data->token = tokens;
   data->cmd = cmd;
   redirect_input(cmd, ctx->fds, ctx->index);
@@ -398,6 +427,7 @@ static void execute_pipeline(t_cmd *cmd, t_pipeline_ctx *ctx) {
   index = 0;
   last_pid = -1;
   current = cmd;
+  ctx->data->cmd = cmd;
   if (ctx->count == 1) {
     argv = build_argv(cmd);
     if (!argv || !argv[0] || is_builtin(argv[0]) ||
