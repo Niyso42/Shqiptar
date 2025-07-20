@@ -193,6 +193,7 @@ int redirect_input(t_cmd *cmd, int *fds, int index) {
 
 int redirect_output(t_cmd *cmd, int *fds, int index, int is_last) {
   int fd;
+  struct stat stats;
 
   if (cmd->outfile != NULL) {
     if (!access(cmd->outfile, F_OK)) {
@@ -200,6 +201,12 @@ int redirect_output(t_cmd *cmd, int *fds, int index, int is_last) {
         dprintf(2, "minishell: %s: ", cmd->outfile);
         perror("");
         return 0;
+      }
+      if (!stat(cmd->outfile, &stats)) {
+        if (stats.st_mode & S_IFDIR) {
+          dprintf(2, "minishell: %s: Is a directory\n", cmd->outfile);
+          return (0);
+        }
       }
     }
     if (cmd->append == 0)
