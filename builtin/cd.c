@@ -89,10 +89,26 @@ static char *backup_current_dir(void) {
 }
 
 static int change_directory(char *path) {
+  struct stat buf;
+
+  if (!stat(path, &buf)) {
+    if (!(buf.st_mode & S_IFDIR)) {
+      ft_putstr_fd("cd: ", 2);
+      ft_putstr_fd(path, 2);
+      ft_putstr_fd(": Not a directory\n", 2);
+      return 1;
+    }
+  } else {
+    ft_putstr_fd("cd: ", 2);
+    ft_putstr_fd(path, 2);
+    ft_putstr_fd(": ", 2);
+    perror("");
+    return (1);
+  }
   if (chdir(path) != 0) {
     ft_putstr_fd("cd: ", 2);
     ft_putstr_fd(path, 2);
-    ft_putstr_fd(": No such file or directory\n", 2);
+    ft_putstr_fd(": Permission denied\n", 2);
     return (1);
   }
   return (0);
