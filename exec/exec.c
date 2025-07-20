@@ -167,7 +167,7 @@ int redirect_input(t_cmd *cmd, int *fds, int index) {
   int fd;
 
   if (cmd->infile != NULL) {
-    if (access(cmd->infile, R_OK) == -1) {
+    if (access(cmd->infile, F_OK | R_OK) == -1) {
       dprintf(2, "minishell: %s: ", cmd->infile);
       perror("");
       return 0;
@@ -196,8 +196,11 @@ int redirect_output(t_cmd *cmd, int *fds, int index, int is_last) {
 
   if (cmd->outfile != NULL) {
     if (!access(cmd->outfile, F_OK)) {
-      dprintf(2, "minishell: %s: Permission denied\n", cmd->outfile);
-      return 0;
+      if (access(cmd->outfile, W_OK) == -1) {
+        dprintf(2, "minishell: %s: ", cmd->outfile);
+        perror("");
+        return 0;
+      }
     }
     if (cmd->append == 0)
       fd = open(cmd->outfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
@@ -279,8 +282,10 @@ void execute_one_cmd(t_cmd *cmd, t_exec_context *ctx, t_data *data,
   clean_before_cmd(data->cmd, cmd);
   data->token = tokens;
   data->cmd = cmd;
-  redirect_input(cmd, ctx->fds, ctx->index);
-  redirect_output(cmd, ctx->fds, ctx->index, ctx->is_last);
+  if (!redirect_input(cmd, ctx->fds, ctx->index))
+    cleanup_and_exit(NULL, data, 1);
+  if (!redirect_output(cmd, ctx->fds, ctx->index, ctx->is_last))
+    cleanup_and_exit(NULL, data, 1);
   close_unused_fds(ctx);
   argv = build_argv(cmd);
   handle_empty_argv(argv, data);
