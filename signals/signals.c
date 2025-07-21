@@ -6,7 +6,7 @@
 /*   By: mubersan <mubersan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/20 19:12:14 by mubersan          #+#    #+#             */
-/*   Updated: 2025/06/29 21:34:20 by mubersan         ###   ########.fr       */
+/*   Updated: 2025/07/21 21:35:46 by mubersan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,15 @@ void	handle_sigint(int sig)
 	rl_on_new_line();
 	rl_redisplay();
 	g_exit_status = 130;
+}
+
+void	handle_sigint_heredoc(int sig)
+{
+	(void)sig;
+	write(STDOUT_FILENO, "^C", 2);
+	write(STDOUT_FILENO, "\n", 1);
+	close(STDOUT_FILENO); 
+	exit(130);
 }
 
 void	handle_sigint_status(t_data *data)

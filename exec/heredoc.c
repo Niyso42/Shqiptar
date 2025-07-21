@@ -6,7 +6,7 @@
 /*   By: mubersan <mubersan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/24 20:31:59 by mubersan          #+#    #+#             */
-/*   Updated: 2025/06/29 22:00:04 by mubersan         ###   ########.fr       */
+/*   Updated: 2025/07/21 21:35:01 by mubersan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -96,12 +96,6 @@ int process_heredoc_line(char *line, char *delimiter, int fd, int is_last)
     return (0);
 }
 
-static void	setup_heredoc_child_signals(void)
-{
-	disable_echoctl();
-	signal(SIGINT, SIG_DFL);
-}
-
 static void	process_single_heredoc(t_cmd *cmd, int write_fd, int index)
 {
 	char	*line;
@@ -125,7 +119,8 @@ void heredoc_child_process(t_cmd *cmd, int write_fd)
 {
 	int	i;
 
-	setup_heredoc_child_signals();
+	disable_echoctl();
+	signal(SIGINT, handle_sigint_heredoc);
 	i = 0;
 	while (i < cmd->nb_heredoc)
 	{

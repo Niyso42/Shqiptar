@@ -6,7 +6,7 @@
 /*   By: mubersan <mubersan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/13 17:30:39 by mubersan          #+#    #+#             */
-/*   Updated: 2025/06/29 21:21:52 by mubersan         ###   ########.fr       */
+/*   Updated: 2025/07/21 21:36:25 by mubersan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -166,6 +166,12 @@ int create_fds(t_cmd *cmd, int **fds_out) {
 int redirect_input(t_cmd *cmd, int *fds, int index) {
   int fd;
 
+  if (cmd->heredoc_fd != -1) {
+    dup2(cmd->heredoc_fd, STDIN_FILENO);
+    close(cmd->heredoc_fd);
+    return 1;
+  }
+
   if (cmd->infile != NULL) {
     if (access(cmd->infile, F_OK | R_OK) == -1) {
       dprintf(2, "minishell: %s: ", cmd->infile);
@@ -179,11 +185,11 @@ int redirect_input(t_cmd *cmd, int *fds, int index) {
     }
     dup2(fd, 0);
     close(fd);
-  } else if (cmd->heredoc) {
-    if (cmd->heredoc_fd != STDIN_FILENO) {
-      dup2(cmd->heredoc_fd, 0);
-      close(cmd->heredoc_fd);
-    }
+  // } else if (cmd->heredoc) {
+  //   if (cmd->heredoc_fd != STDIN_FILENO) {
+  //     dup2(cmd->heredoc_fd, 0);
+  //     close(cmd->heredoc_fd);
+  //   }
   } else if (index > 0) {
     dup2(fds[(index - 1) * 2], 0);
     close(fds[(index - 1) * 2]);
@@ -259,7 +265,7 @@ static void handle_command_execution(char **argv, t_data *data) {
 
 static void clean_before_token(t_token *token_to_clean, t_token *token_final) {
   t_token *tmp;
-  if (!token_to_clean || token_final)
+  if (!token_to_clean || !token_final)
     return;
   while (token_to_clean != token_final) {
     tmp = token_to_clean->next;

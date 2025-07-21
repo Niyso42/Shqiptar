@@ -6,7 +6,7 @@
 /*   By: mubersan <mubersan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/27 23:17:09 by mubersan          #+#    #+#             */
-/*   Updated: 2025/06/29 17:50:40 by mubersan         ###   ########.fr       */
+/*   Updated: 2025/07/21 21:38:25 by mubersan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -66,7 +66,7 @@ t_cmd *init_struct(void) {
   new_cmd->append = 0;
   new_cmd->heredoc = NULL;
   new_cmd->nb_heredoc = 0;
-  new_cmd->heredoc_fd = 0;
+  new_cmd->heredoc_fd = -1;
   new_cmd->next = NULL;
   return (new_cmd);
 }
@@ -126,14 +126,25 @@ void handle_pipe_cmd(t_cmd **current_cmd) {
 void handle_redin_cmd(t_cmd *cmd, t_token *token) {
   if (token->next == NULL)
     return;
+  if (cmd->infile)
+    free(cmd->infile);
   cmd->infile = ft_strdup(token->next->content);
 }
 
 void handle_append_cmd(t_cmd *cmd, t_token *token) {
-  if (token->next == NULL)
-    return;
-  cmd->outfile = ft_strdup(token->next->content);
-  cmd->append = 1;
+    int fd;
+
+    if (!token || !token->next)
+        return;
+    
+    fd = open(token->next->content, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if (fd != -1)
+        close(fd);
+
+    if (cmd->outfile)
+        free(cmd->outfile);
+    cmd->outfile = ft_strdup(token->next->content);
+    cmd->append = 1;
 }
 
 void handle_heredoc_cmd(t_cmd *cmd, t_token *token, int *i) {
@@ -143,12 +154,26 @@ void handle_heredoc_cmd(t_cmd *cmd, t_token *token, int *i) {
   (*i)++;
 }
 
-void handle_redout_cmd(t_cmd *cmd, t_token *token) {
-  if (token->next == NULL)
-    return;
-  cmd->outfile = ft_strdup(token->next->content);
-  cmd->append = 0;
+void handle_redout_cmd(t_cmd *cmd, t_token *token) 
+{
+    int fd;
+
+    if (!token || !token->next)
+        return;
+
+    if (cmd->outfile) {
+        free(cmd->outfile);
+        cmd->outfile = NULL;
+    }
+
+    fd = open(token->next->content, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+    if (fd != -1)
+        close(fd);
+
+    cmd->outfile = ft_strdup(token->next->content);
+    cmd->append = 0;
 }
+
 
 int open_outfile(char *filename, int append) {
   int result;
