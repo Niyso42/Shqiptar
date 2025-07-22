@@ -6,14 +6,15 @@
 /*   By: mubersan <mubersan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/13 17:30:39 by mubersan          #+#    #+#             */
-/*   Updated: 2025/07/21 21:36:25 by mubersan         ###   ########.fr       */
+/*   Updated: 2025/07/22 16:43:30 by mubersan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/minishell.h"
 
-static void cleanup_and_exit(char **argv, t_data *data, int exit_code) {
-  free_tab(argv);
+void cleanup_and_exit(char **argv, t_data *data, int exit_code) {
+  if (!argv || !*argv)
+    free_tab(argv);
   free_cmd(data->cmd);
   free_tokens(data->token);
   *data->exit->exit = exit_code;

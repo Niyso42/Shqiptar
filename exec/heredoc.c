@@ -6,7 +6,7 @@
 /*   By: mubersan <mubersan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/24 20:31:59 by mubersan          #+#    #+#             */
-/*   Updated: 2025/07/21 21:35:01 by mubersan         ###   ########.fr       */
+/*   Updated: 2025/07/22 16:45:56 by mubersan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -115,7 +115,7 @@ static void	process_single_heredoc(t_cmd *cmd, int write_fd, int index)
 	}
 }
 
-void heredoc_child_process(t_cmd *cmd, int write_fd)
+void heredoc_child_process(t_cmd *cmd, int write_fd, t_data *data)
 {
 	int	i;
 
@@ -128,7 +128,7 @@ void heredoc_child_process(t_cmd *cmd, int write_fd)
 		i++;
 	}
 	close(write_fd);
-	exit(0);
+	cleanup_and_exit(NULL, data, 0);
 }
 
 int handle_heredoc_parent(pid_t pid, int *fds, t_data *data)
@@ -182,7 +182,7 @@ int create_heredoc_pipe(t_cmd *cmd, t_data *data)
 	if (pid == 0)
 	{
 		close(fds[0]);
-		heredoc_child_process(cmd, fds[1]);
+		heredoc_child_process(cmd, fds[1], data);
 	}
 	if (handle_heredoc_parent(pid, fds, data) == 1)
 		return (1);
